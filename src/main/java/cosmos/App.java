@@ -26,9 +26,9 @@ public class App {
     public static void main(String... args) {
         logger = Logger.getLogger("SDK TEST");
         App app = new App();
-//        app.createSample();
-//        app.querySample();
-        app.test3();
+        app.createSample();
+        app.querySample1();
+        app.querySample2();
         app.changeFeedSample();
     }
 
@@ -122,14 +122,14 @@ public class App {
                         .doOnError(throwable -> logger.info("[Create] Unable to query: " + throwable.getMessage()))
                         .publishOn(Schedulers.immediate()).blockLast();
 
-        feedResponse.results().stream().forEach(f -> logger.info("[Create] Current stored data \n" + f.toJson(SerializationFormattingPolicy.INDENTED)));
+        feedResponse.results().stream().forEach(f -> logger.info("[Create] Current stored data " + f.toJson(SerializationFormattingPolicy.INDENTED)));
 
         //Close client
         client.close();
         logger.info("[Create] Completed");
     }
 
-    void querySample() {
+    void querySample1() {
 
         // Connect to Cosmos DB
         CosmosClient client = CosmosClient.builder()
@@ -138,12 +138,12 @@ public class App {
                 .build();
 
         // Create Database and Container if none of them exists
-        logger.info("[Query] Query Database");
+        logger.info("[querySample1] start");
 
         CosmosDatabase cosmosDatabase = client.getDatabase(DATABASE);
         CosmosContainer cosmosContainer = cosmosDatabase.getContainer(CONTAINER);
         FeedResponse<CosmosItemProperties> feedResponse = cosmosContainer.queryItems("select c.id, c.name, c.country, c.description from " + CONTAINER + " c", new FeedOptions().enableCrossPartitionQuery(true).maxDegreeOfParallelism(2))
-                .doOnError(throwable -> logger.info("[Query] Unable to create Database: " + throwable.getMessage()))
+                .doOnError(throwable -> logger.info("[querySample1] Unable to create Database: " + throwable.getMessage()))
                 .publishOn(Schedulers.elastic())
                 .blockLast();
 
@@ -151,7 +151,7 @@ public class App {
             return;
         }
 
-        feedResponse.results().stream().forEach(f -> logger.info("[Query] Current stored data \n" + f.toJson(SerializationFormattingPolicy.INDENTED)));
+        feedResponse.results().stream().forEach(f -> logger.info("[querySample1] Current stored data \n" + f.toJson(SerializationFormattingPolicy.INDENTED)));
 
         List<People> peopleList = new ArrayList<>();
         Jsonb jsonb = JsonbBuilder.create();
@@ -159,16 +159,16 @@ public class App {
             peopleList.add(jsonb.fromJson(f.toJson(), People.class));
         });
         for (People p : peopleList) {
-            logger.info("[Query] " + jsonb.toJson(p));
+            logger.info("[querySample1] " + jsonb.toJson(p));
         }
 
         //Close client
         client.close();
-        logger.info("[Query] Completed");
+        logger.info("[querySample1] Completed");
     }
 
-    void test3() {
-        logger.info("[test3] start");
+    void querySample2() {
+        logger.info("[querySample2] start");
 
         // Connect to Cosmos DB
         CosmosClient client = CosmosClient.builder()
@@ -182,44 +182,52 @@ public class App {
         client.getDatabase(DATABASE)
                 .getContainer(CONTAINER)
                 .queryItems("select c.id, c.name, c.country, c.description from " + CONTAINER + " c", new FeedOptions().enableCrossPartitionQuery(true).maxDegreeOfParallelism(2))
-                .doOnError(throwable -> logger.info("[test3] Unable to get Database: " + throwable.getMessage()))
+                .doOnError(throwable -> logger.info("[querySample2] Unable to get Database: " + throwable.getMessage()))
                 .toStream()
                 .forEach(cosmosItemPropertiesFeedResponse -> cosmosItemPropertiesFeedResponse.results()
                         .stream()
                         .forEach(f -> peopleList.add(jsonb.fromJson(f.toJson(), People.class))));
 
-        peopleList.stream().forEach(d -> logger.info("[test3]" + jsonb.toJson(d)));
+        peopleList.stream().forEach(d -> logger.info("[querySample2]" + jsonb.toJson(d)));
 
         client.close();
-        logger.info("[test3] Completed");
+        logger.info("[querySample2] Completed");
     }
 
     void changeFeedSample() {
 
         logger.info("[ChangeFeedSample] START!");
         // Connect to Cosmos DB
-CosmosClient client = CosmosClient.builder()
+        CosmosClient client = CosmosClient.builder()
         .endpoint(ENDPOINT)
         .key(KEY)
         .build();
 
-CosmosContainer feedContainer = client.getDatabase(DATABASE).createContainerIfNotExists(CONTAINER, "/country").flatMap(f -> Mono.just(f.container())).publishOn(Schedulers.elastic()).block();
-CosmosContainer leaseContainer = client.getDatabase(DATABASE).createContainerIfNotExists(LEASE_CONTAINER, "/id").flatMap(f -> Mono.just(f.container())).publishOn(Schedulers.elastic()).block();
+        CosmosContainer feedContainer = client.getDatabase(DATABASE)
+            .createContainerIfNotExists(CONTAINER, "/country")
+            .flatMap(f -> Mono.just(f.container()))
+            .publishOn(Schedulers.elastic())
+            .block();
+        CosmosContainer leaseContainer = client.getDatabase(DATABASE)
+            .createContainerIfNotExists(LEASE_CONTAINER, "/id")
+            .flatMap(f -> Mono.just(f.container()))
+            .publishOn(Schedulers.elastic())
+            .block();
 
-ChangeFeedProcessor.Builder()
-        .hostName(ENDPOINT)
-        .feedContainer(feedContainer)
-        .leaseContainer(leaseContainer)
-        .handleChanges(docs -> {
-            logger.info("[ChangeFeedSample] handleChanges START!");
-            for (CosmosItemProperties cosmosItemProperties : docs) {
-                logger.info("[ChangeFeedSample] ChangeFeed Received " + cosmosItemProperties.toJson(SerializationFormattingPolicy.INDENTED));
-            }
-            logger.info("[ChangeFeedSample] handleChanges End!");
-        })
-        .options(new ChangeFeedProcessorOptions().feedPollDelay(Duration.ofSeconds(3)))
-        .build()
-        .start()
-        .subscribe();
+        ChangeFeedProcessor.Builder()
+            .hostName(ENDPOINT)
+            .feedContainer(feedContainer)
+            .leaseContainer(leaseContainer)
+            .handleChanges(docs -> {
+                logger.info("[ChangeFeedSample] handleChanges START!");
+                for (CosmosItemProperties cosmosItemProperties : docs) {
+                    logger.info("[ChangeFeedSample] ChangeFeed Received " + cosmosItemProperties.toJson(SerializationFormattingPolicy.INDENTED));
+                }
+                logger.info("[ChangeFeedSample] handleChanges End!");
+            })
+            .options(new ChangeFeedProcessorOptions().feedPollDelay(Duration.ofSeconds(3)))
+            .build()
+            .start()
+            .subscribe();
     }
 }
