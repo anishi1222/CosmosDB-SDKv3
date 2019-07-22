@@ -13,8 +13,9 @@ import java.util.Optional;
 import java.util.logging.Logger;
 
 /**
- * Hello world!
+ * In this sample, block() is used but should not be used in production code.
  */
+
 public class App {
     final static String ENDPOINT = "URL";
     final static String KEY = "Key";
