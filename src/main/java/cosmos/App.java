@@ -18,14 +18,14 @@ import java.util.logging.Logger;
 
 public class App {
     final static String ENDPOINT = "URL";
-    final static String KEY = "Key";
+    final static String KEY = "KEY";
     final static String DATABASE = "test_db";
     final static String CONTAINER = "test_container";
     final static String LEASE_CONTAINER = "lease";
     static Logger logger;
 
     public static void main(String... args) {
-        logger = Logger.getLogger("SDK TEST");
+        logger = Logger.getLogger(App.class.getName());
         App app = new App();
         app.createSample();
         app.querySample1();
