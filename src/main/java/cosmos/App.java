@@ -9,6 +9,7 @@ import javax.json.bind.JsonbBuilder;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.logging.Logger;
 
@@ -17,12 +18,12 @@ import java.util.logging.Logger;
  */
 
 public class App {
-    final static String ENDPOINT = "URL";
-    final static String KEY = "KEY";
-    final static String DATABASE = "test_db";
-    final static String CONTAINER = "test_container";
-    final static String LEASE_CONTAINER = "lease";
-    static Logger logger;
+    private final static String ENDPOINT = "URL";
+    private final static String KEY = "KEY";
+    private final static String DATABASE = "test_db";
+    private final static String CONTAINER = "test_container";
+    private final static String LEASE_CONTAINER = "lease";
+    private static Logger logger;
 
     public static void main(String... args) {
         logger = Logger.getLogger(App.class.getName());
@@ -33,7 +34,7 @@ public class App {
         app.changeFeedSample();
     }
 
-    void createSample() {
+    private void createSample() {
 
         // Add new records
         People p1 = new People("111", "Test1", "test description1", "US");
@@ -92,13 +93,13 @@ public class App {
                 .doOnError(throwable -> logger.info("[Create] Unable to read data " + throwable.getMessage()))
                 .collectSortedList()
                 .flatMap(feedResponses -> {
-                    feedResponses.stream().forEach(f -> logger.info("[Create] f.toString() " + f.toString()));
+                    feedResponses.forEach(f -> logger.info("[Create] f.toString() " + f.toString()));
                     return Mono.just(feedResponses);
                 })
                 .publishOn(Schedulers.elastic())
                 .block();
 
-        for (FeedResponse<CosmosItemProperties> f : cosmosItemProperties) {
+        for (FeedResponse<CosmosItemProperties> f : Objects.requireNonNull(cosmosItemProperties)) {
             for (CosmosItemProperties c : f.results()) {
                 logger.info("[Create] c.toJson()" + c.toJson(SerializationFormattingPolicy.INDENTED));
             }
@@ -123,14 +124,14 @@ public class App {
                         .doOnError(throwable -> logger.info("[Create] Unable to query: " + throwable.getMessage()))
                         .publishOn(Schedulers.immediate()).blockLast();
 
-        feedResponse.results().stream().forEach(f -> logger.info("[Create] Current stored data " + f.toJson(SerializationFormattingPolicy.INDENTED)));
+        Objects.requireNonNull(feedResponse).results().forEach(f -> logger.info("[Create] Current stored data " + f.toJson(SerializationFormattingPolicy.INDENTED)));
 
         //Close client
         client.close();
         logger.info("[Create] Completed");
     }
 
-    void querySample1() {
+    private void querySample1() {
 
         // Connect to Cosmos DB
         CosmosClient client = CosmosClient.builder()
@@ -152,13 +153,11 @@ public class App {
             return;
         }
 
-        feedResponse.results().stream().forEach(f -> logger.info("[querySample1] Current stored data \n" + f.toJson(SerializationFormattingPolicy.INDENTED)));
+        feedResponse.results().forEach(f -> logger.info("[querySample1] Current stored data \n" + f.toJson(SerializationFormattingPolicy.INDENTED)));
 
         List<People> peopleList = new ArrayList<>();
         Jsonb jsonb = JsonbBuilder.create();
-        feedResponse.results().forEach(f -> {
-            peopleList.add(jsonb.fromJson(f.toJson(), People.class));
-        });
+        feedResponse.results().forEach(f -> peopleList.add(jsonb.fromJson(f.toJson(), People.class)));
         for (People p : peopleList) {
             logger.info("[querySample1] " + jsonb.toJson(p));
         }
@@ -168,7 +167,7 @@ public class App {
         logger.info("[querySample1] Completed");
     }
 
-    void querySample2() {
+    private void querySample2() {
         logger.info("[querySample2] start");
 
         // Connect to Cosmos DB
@@ -186,16 +185,15 @@ public class App {
                 .doOnError(throwable -> logger.info("[querySample2] Unable to get Database: " + throwable.getMessage()))
                 .toStream()
                 .forEach(cosmosItemPropertiesFeedResponse -> cosmosItemPropertiesFeedResponse.results()
-                        .stream()
                         .forEach(f -> peopleList.add(jsonb.fromJson(f.toJson(), People.class))));
 
-        peopleList.stream().forEach(d -> logger.info("[querySample2]" + jsonb.toJson(d)));
+        peopleList.forEach(d -> logger.info("[querySample2]" + jsonb.toJson(d)));
 
         client.close();
         logger.info("[querySample2] Completed");
     }
 
-    void changeFeedSample() {
+    private void changeFeedSample() {
 
         logger.info("[ChangeFeedSample] START!");
         // Connect to Cosmos DB
