@@ -23,6 +23,7 @@ public class App {
     private final static String DATABASE = "test_db";
     private final static String CONTAINER = "test_container";
     private final static String LEASE_CONTAINER = "lease";
+    pricate final static String[] REGION = {"japaneast", "japanwest"};
     private static Logger logger;
 
     public static void main(String... args) {
@@ -43,9 +44,15 @@ public class App {
 
 
         // Connect to Cosmos DB
+        ConnectionPolicy policy = new ConnectionPolicy()
+                .usingMultipleWriteLocations(true)
+                .preferredLocations(Arrays.asList(REGION));
+
         CosmosClient client = CosmosClient.builder()
                 .endpoint(ENDPOINT)
                 .key(KEY)
+                .consistencyLevel(ConsistencyLevel.EVENTUAL)
+                .connectionPolicy(policy)
                 .build();
 
         // Create Database and Container if none of them exists
