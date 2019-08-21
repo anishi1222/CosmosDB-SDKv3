@@ -23,7 +23,7 @@ public class App {
     private final static String DATABASE = "test_db";
     private final static String CONTAINER = "test_container";
     private final static String LEASE_CONTAINER = "lease";
-    private final static String[] REGION = {"japaneast", "japanwest"};
+    private final static String[] REGION = {"Japan East", "Japan West"};
     private static Logger logger;
 
     public static void main(String... args) {
